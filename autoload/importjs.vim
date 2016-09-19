@@ -24,7 +24,11 @@ function importjs#TryExecPayload(payload, tryCount)
     return
   endif
 
-  let resultString = ch_evalraw(g:ImportJSChannel, json_encode(a:payload) . "\n")
+  if exists('*ch_evalraw')
+    let resultString = ch_evalraw(g:ImportJSChannel, json_encode(a:payload) . "\n")
+  elseif exists('*jobsend')
+    let resultString = jobsend(g:ImportJSChannel, json_encode(a:payload) . "\n")
+  endif
   if (resultString != "")
     return resultString
   endif
@@ -132,9 +136,15 @@ endfun
 function! importjs#Init()
    " Include the PID of the parent (this Vim process) to make `ps` output more
    " useful.
-  let s:job=job_start(['importjsd', 'start', '--parent-pid', getpid()], {
-    \'exit_cb': 'importjs#JobExit',
-  \})
+  if exists('*job_start')
+    let s:job_id=job_getchannel(job_start(['importjsd', 'start', '--parent-pid', getpid()], {
+      \'exit_cb': 'importjs#JobExit',
+    \}))
+  elseif exists('*jobstart')
+    let s:job_id=jobstart(['importjsd', 'start', '--parent-pid', getpid()], {
+      \'exit_cb': 'importjs#JobExit',
+    \})
+  endif
 
-  let g:ImportJSChannel=job_getchannel(s:job)
+  let g:ImportJSChannel=(s:job_id)
 endfunction
